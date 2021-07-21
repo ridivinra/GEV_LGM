@@ -302,8 +302,6 @@ fit_model_psi2 <- function(data, desc){
     inla.spde2.pcmatern(mesh=mesh, prior.range=c(prior.quantile.range, 0.95), 
                         prior.sigma=c(prior.quantile.sd, 0.01))
   # Make the C matrix for generic0 random effect
-  #sigma <- makeSigma_etay(data)
-  #scale_psi <- 1/diag(sigma)[1:N]
   scale_psi <- 1/data$v_p
   stack_psi <- inla.stack(
     data=list(Y=data$psi), 
@@ -406,7 +404,7 @@ fit_model_gamma <- function(data, desc){
   spde <- 
     inla.spde2.pcmatern(mesh=mesh, prior.range=c(prior.quantile.range, 0.95), 
                         prior.sigma=c(prior.quantile.sd, 0.01))
-
+  
   scale_tau <- 1/data$v_g
   stack_tau <- inla.stack(
     data=list(Y=data$gamma), 
