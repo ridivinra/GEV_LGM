@@ -269,7 +269,7 @@ kappa_0 <- c(tau_psi_0$mode, rho_psi_0$mode, sigma_psi_0$mode,
 Sigma_kappa_0 <- diag(c(tau_psi_0$sd^2, rho_psi_0$sd^2, sigma_psi_0$sd^2,
                         tau_tau_0$sd^2, rho_tau_0$sd^2, sigma_tau_0$sd^2, 
                         tau_xi_0$sd^2, tau_gamma_0$sd^2/4))*0.2
-Sigma_kappa_0 <- (chain %>% t() %>% data.frame() %>% distinct() %>% cov())*.5
+#Sigma_kappa_0 <- (chain %>% t() %>% data.frame() %>% distinct() %>% cov())*.5
 library(MASS)
 library(SparseM)
 #################################### Model fitting - Hyperparameters (One chain) ##################
