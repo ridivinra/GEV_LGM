@@ -1,19 +1,20 @@
 library(evd)
-library("Matrix")
+library(Matrix)
 library(tidyverse)
-source("helperFun.R")
 library(knitr)
 library(INLA)
 library(mapdata)
 library(data.table)
 library(rgdal)
 
-######### Byrja á að græja gögnin -------------------------------------------------------------------------------------
+# A few helper functions
+source("helperFun.R")
+
 #### Get the data ready
 # Read in the data
-# Get catchment descriptors
-load("catchmentDesc.RData")
-load("flowDataSample.RData")
+# Get catchment descriptors and flow data
+load("catchmentDesc.RData")  # catchmentDesc
+load("flowDataSample.RData") # flowData
 
 # Number of stations
 n_st <- nrow(catchmentDesc)
@@ -56,7 +57,7 @@ fn <- function(theta,y,t) {
 }
 
 ####################### ML step ##############################################
-dt <- data.frame()
+dt_mles <- data.frame()
 hess <- data.frame()
 for(i in 1:n_st){
   station <- stations[i]
@@ -95,9 +96,8 @@ for(i in 1:n_st){
     v_k_g = S_d[3,4],
     v_g = S_d[4,4]
   )
-  dt <- rbind(res, dt)
+  dt_mles <- rbind(res, dt_mles)
 }
-dt_mles <- dt
 
 ################################## Make covariates ready #####################################################################
 names <- c(
@@ -118,7 +118,7 @@ names <- c(
   "log(PROPWET)")
 ncols <- length(names)
 covariates <- matrix(c(
-  rep(1,n_st),
+  rep(1,n_st), # Intercept
   transform(catchmentDesc$Area, "AREA"),
   transform(catchmentDesc$SAAR, "SAAR"),
   transform(catchmentDesc$FARL, "FARL"),
@@ -153,13 +153,12 @@ mesh <- inla.mesh.2d(
   loc=coords,
   offset = 0.08,
   max.edge = 0.07,
-  # discretization accuracy
   cutoff = 0.005)
 
 # To plot mesh
-plot(mesh)
+# plot(mesh)
 
-# Make A matrix same for psi and tau
+# Make A matrix - The same for psi and tau
 A_mat <- inla.spde.make.A(mesh, loc=coords)
 A_psi <- A_mat
 A_tau <- A_mat
@@ -168,10 +167,10 @@ A_tau <- A_mat
 # Add location to MLE data
 dt_mles <- dt_mles %>% 
   left_join(catchmentDesc %>% select(Northing, Easting, Station))
-mdl_sep_psi <- fit_model_psi2(data = dt_mles, desc = X_psi)
-mdl_sep_tau <- fit_model_tau2(data = dt_mles, desc = X_tau)
-mdl_sep_xi <- fit_model_kappa2(data = dt_mles, desc = X_kappa)
-mdl_sep_gamma <- fit_model_gamma_without_spatial(data = dt_mles, desc = X_gamma)
+mdl_sep_psi <- fit_model_psi(data = dt_mles, desc = X_psi)
+mdl_sep_tau <- fit_model_tau(data = dt_mles, desc = X_tau)
+mdl_sep_xi <- fit_model_kappa(data = dt_mles, desc = X_kappa)
+mdl_sep_gamma <- fit_model_gamma(data = dt_mles, desc = X_gamma)
 
 # The spde object is only used for getting the precision matrix for a given range and sd
 # so priors do not matter here
@@ -255,6 +254,7 @@ rho_tau_0 <- get_mode_mean_sd_for_hyperparameter(mdl_sep_tau$mdl, function(x) lo
 sigma_psi_0 <- get_mode_mean_sd_for_hyperparameter(mdl_sep_psi$mdl, function(x) log(x), "Stdev for s")
 sigma_tau_0 <- get_mode_mean_sd_for_hyperparameter(mdl_sep_tau$mdl, function(x) log(x), "Stdev for s")
 
+# Number of stations
 N <- nrow(dt_mles)
 eta_hat <- matrix(c(dt_mles$psi, dt_mles$tau, dt_mles$kappa, dt_mles$gamma), nrow = 4 * N)
 

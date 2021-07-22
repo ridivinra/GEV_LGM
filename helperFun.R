@@ -35,48 +35,6 @@ multiplot <- function(..., plotlist=NULL, file, cols=1, layout=NULL) {
 }
 
 # Make the covariance matrix for the observationss
-makeSigma_etay <- function(dt){
-  N_rows <- dim(dt)[1]
-  Sigma_etay <- matrix(0, nrow = 3*N_rows, ncol = 3*N_rows)
-  for(i in 1:N_rows){
-    Sigma_etay[i,i] <- dt$v_p[i]
-    Sigma_etay[i,i+N_rows] <- dt$cov_p_t[i]
-    Sigma_etay[i,i+2*N_rows] <- dt$cov_p_x[i]
-  }
-  for(i in 1:N_rows){
-    Sigma_etay[i+N_rows,i] <- dt$cov_p_t[i]
-    Sigma_etay[i+N_rows,i+N_rows] <- dt$v_t[i]
-    Sigma_etay[i+N_rows,i+2*N_rows] <- dt$cov_t_x[i]
-  }
-  for(i in 1:N_rows){
-    Sigma_etay[i+2*N_rows,i] <- dt$cov_p_x[i]
-    Sigma_etay[i+2*N_rows,i+N_rows] <- dt$cov_t_x[i]
-    Sigma_etay[i+2*N_rows,i+2*N_rows] <- dt$v_x[i]
-  }
-  return(Matrix(Sigma_etay, sparse = T))
-}
-# Make the covariance matrix for the observationss
-makeSigma_etay_new <- function(dt){
-  N_rows <- dim(dt)[1]
-  Sigma_etay <- matrix(0, nrow = 3*N_rows, ncol = 3*N_rows)
-  for(i in 1:N_rows){
-    Sigma_etay[i,i] <- dt$v_p[i]
-    Sigma_etay[i,i+N_rows] <- dt$v_p_t[i]
-    Sigma_etay[i,i+2*N_rows] <- dt$v_p_k[i]
-  }
-  for(i in 1:N_rows){
-    Sigma_etay[i+N_rows,i] <- dt$v_p_t[i]
-    Sigma_etay[i+N_rows,i+N_rows] <- dt$v_t[i]
-    Sigma_etay[i+N_rows,i+2*N_rows] <- dt$v_t_k[i]
-  }
-  for(i in 1:N_rows){
-    Sigma_etay[i+2*N_rows,i] <- dt$v_p_k[i]
-    Sigma_etay[i+2*N_rows,i+N_rows] <- dt$v_t_k[i]
-    Sigma_etay[i+2*N_rows,i+2*N_rows] <- dt$v_k[i]
-  }
-  return(Matrix(Sigma_etay, sparse = T))
-}
-# Make the covariance matrix for the observationss
 makeSigma_etay_w_gamma <- function(dt){
   N_rows <- dim(dt)[1]
   Sigma_etay <- matrix(0, nrow = 4*N_rows, ncol = 4*N_rows)
@@ -106,27 +64,6 @@ makeSigma_etay_w_gamma <- function(dt){
   }
   return(Matrix(Sigma_etay))
 }
-fit_model_gamma_without_spatial <- function(data, desc){
-  N <- dim(data)[1]
-  
-  scale_tau <- 1/data$v_g
-  stack_tau <- inla.stack(
-    data=list(Y=data$gamma), 
-    A=list(1),tag='dat',
-    effect = list(list(idx = 1:N, X_tau = desc)))
-  formula_tau <- Y ~ -1 + X_tau +
-    f(idx,model="iid",hyper=list(theta=list(prior="pc.prec", param=c(.1,.05))))
-  control.family = list(hyper = list(prec = list(
-    initial = 0, fixed = TRUE)))
-  
-  model <- inla(formula_tau, family='gaussian', 
-                data=inla.stack.data(stack_tau), 
-                control.predictor=list( A=inla.stack.A(stack_tau), compute = TRUE),
-                control.family = control.family,
-                scale = scale_tau)
-  return(list(mdl = model))
-}
-
 
 # Convert coordinates to long lat
 convertCoords <- function(dt){
@@ -181,110 +118,9 @@ convertCoords <- function(dt){
   return(res)
 }
 
-GetHyper <- function(model, hyperParNumber, f){
-  tau0 <- model$marginals.hyperpar[[hyperParNumber]]
-  E <- inla.emarginal(f, tau0)
-  mysd <- sqrt(E[2] - E[1]^2)
-  return(list(mean=E[1], sd=mysd))
-}
-local.plot.field = function(field, mesh, xlim=c(-0.1,1), ylim=c(-0.1,1), ...){
-  stopifnot(length(field) == mesh$n)
-  # - error when using the wrong mesh
-  proj = inla.mesh.projector(mesh, dims=c(300, 300))
-  # - Can project from the mesh onto a 300x300 plotting grid 
-  field.proj = inla.mesh.project(proj, field)
-  # - Do the projection
-  image.plot(list(x = proj$x, y=proj$y, z = field.proj), 
-             xlim = xlim, ylim = ylim, ...)  
-}
-multiplot <- function(..., plotlist=NULL, file, cols=1, layout=NULL) {
-  library(grid)
-  
-  # Make a list from the ... arguments and plotlist
-  plots <- c(list(...), plotlist)
-  
-  numPlots = length(plots)
-  
-  # If layout is NULL, then use 'cols' to determine layout
-  if (is.null(layout)) {
-    # Make the panel
-    # ncol: Number of columns of plots
-    # nrow: Number of rows needed, calculated from # of cols
-    layout <- matrix(seq(1, cols * ceiling(numPlots/cols)),
-                     ncol = cols, nrow = ceiling(numPlots/cols))
-  }
-  
-  if (numPlots==1) {
-    print(plots[[1]])
-    
-  } else {
-    # Set up the page
-    grid.newpage()
-    pushViewport(viewport(layout = grid.layout(nrow(layout), ncol(layout))))
-    
-    # Make each plot, in the correct location
-    for (i in 1:numPlots) {
-      # Get the i,j matrix positions of the regions that contain this subplot
-      matchidx <- as.data.frame(which(layout == i, arr.ind = TRUE))
-      
-      print(plots[[i]], vp = viewport(layout.pos.row = matchidx$row,
-                                      layout.pos.col = matchidx$col))
-    }
-  }
-}
 
-filter_data <- function(dt, cd){
-  stations <- filter(cd, suitQMED == "YES", suitPool == "YES") %>% dplyr::select(Station)
-  res <- filter(dt, x < 8) %>% 
-    filter(Station %in% stations$Station)
-  res <- filter(res, URBEXT>=0, FPEXT>=0)
-  return(res)
-}
-
-
-fit_model_psi <- function(dt, catch_desc){
-  N <- dim(dt)[1]
-  coords_obj <- convertCoords(dt)
-  coords <- coords_obj$coords
-  map_scaled <- coords_obj$map_scaled
-  mesh <- inla.mesh.2d(
-    loc=coords,
-    offset = 0.08,
-    max.edge=0.07,
-    # discretization accuracy
-    cutoff=0.005)
-  A_mat <- inla.spde.make.A(mesh, loc=coords)
-  N_s <- dim(A_mat)[2]
-  prior.quantile.sd = 1; prior.quantile.range = 0.5
-  spde <- 
-    inla.spde2.pcmatern(mesh=mesh, prior.range=c(prior.quantile.range, 0.95), 
-                        prior.sigma=c(prior.quantile.sd, 0.01))
-  # Make the C matrix for generic0 random effect
-  sigma <- makeSigma_etay(dt)
-  scale_psi <- 1/diag(sigma)[1:N]
-  
-  stack_psi <- inla.stack(
-    data=list(Y=dt$p), 
-    A=list(A_mat,1),tag='dat',
-    effect = list(list(s=1:N_s),
-                  list(idx = 1:N, X_psi = catch_desc)))
-  formula_psi <- Y ~ -1 + X_psi +
-    f(s, model=spde) + 
-    f(idx,model="iid",hyper=list(theta=list(prior="pc.prec")))
-  
-  control.family = list(hyper = list(prec = list(
-    initial = 0, fixed = TRUE)))
-  
-  model <- inla(formula_psi, family='gaussian', 
-                control.compute=list(dic=TRUE),
-                data=inla.stack.data(stack_psi), 
-                control.predictor=list( A=inla.stack.A(stack_psi), compute = TRUE),
-                control.family = control.family,
-                scale=scale_psi)
-  return(model)
-} 
 # Fit a model for psi with the spatial component
-fit_model_psi2 <- function(data, desc){
+fit_model_psi <- function(data, desc){
   N <- dim(data)[1]
   coords_obj <- convertCoords(data)
   coords <- coords_obj$coords
@@ -323,32 +159,8 @@ fit_model_psi2 <- function(data, desc){
                 scale = scale_psi)
   return(list(mdl = model, spde = spde, mesh = mesh))
 } 
-# Fit a model for psi without the spatial component
-fit_model_psi_no_spatial <- function(data, desc){
-  N <- dim(data)[1]
-  # Make the C matrix for generic0 random effect
-  #sigma <- makeSigma_etay(data)
-  #scale_psi <- 1/diag(sigma)[1:N]
-  scale_psi <- 1/data$v_p
-  stack_psi <- inla.stack(
-    data=list(Y=data$p), 
-    A=list(1),tag='dat',
-    effect = list(list(idx = 1:N, X_psi = desc)))
-  formula_psi <- Y ~ -1 + X_psi +
-    f(idx,model="iid",hyper=list(theta=list(prior="pc.prec", param=c(1,.01))))
-  
-  control.family = list(hyper = list(prec = list(
-    initial = 0, fixed = TRUE)))
-  
-  model <- inla(formula_psi, family='gaussian', 
-                control.compute=list(dic=TRUE),
-                data=inla.stack.data(stack_psi), 
-                control.predictor=list( A=inla.stack.A(stack_psi), compute = TRUE),
-                control.family = control.family,
-                scale = scale_psi)
-  return(list(mdl = model))
-} 
-fit_model_tau2 <- function(data, desc){
+
+fit_model_tau <- function(data, desc){
   N <- dim(data)[1]
   coords_obj <- convertCoords(data)
   coords <- coords_obj$coords
@@ -388,192 +200,41 @@ fit_model_tau2 <- function(data, desc){
                 scale = scale_tau)
   return(list(mdl = model, spde = spde, mesh = mesh))
 }
+
+fit_model_kappa <- function(data, desc){
+  N <- dim(data)[1]
+  # Make the C matrix for generic0 random effect
+  #sigma <- makeSigma_etay(data)
+  #scale_psi <- 1/diag(sigma)[1:N]
+  scale_xi <- 1/data$v_k
+  stack_xi <- inla.stack(
+    data=list(Y = data$kappa), 
+    A=list(1),tag='dat',
+    effect = list(list(idx = 1:N, X_xi = desc)))
+  formula_xi <- Y ~ -1 + X_xi + 
+    f(idx,model="iid",hyper=list(theta=list(prior="pc.prec", param=c(.6,.01))))
+  
+  control.family = list(hyper = list(prec = list(
+    initial = 0, fixed = TRUE)))
+  
+  model <- inla(formula_xi, family='gaussian', 
+                data=inla.stack.data(stack_xi), 
+                control.predictor=list( A=inla.stack.A(stack_xi), compute = TRUE),
+                control.family = control.family,
+                scale = scale_xi)
+  return(list(mdl = model))
+}
+
 fit_model_gamma <- function(data, desc){
   N <- dim(data)[1]
-  coords_obj <- convertCoords(data)
-  coords <- coords_obj$coords
-  map_scaled <- coords_obj$map_scaled
-  mesh <- inla.mesh.2d(
-    loc=coords,
-    offset = 0.08,
-    max.edge=0.07,
-    cutoff=0.005)
-  A_mat <- inla.spde.make.A(mesh, loc=coords)
-  N_s <- dim(A_mat)[2]
-  prior.quantile.sd = .01; prior.quantile.range = 0.5
-  spde <- 
-    inla.spde2.pcmatern(mesh=mesh, prior.range=c(prior.quantile.range, 0.95), 
-                        prior.sigma=c(prior.quantile.sd, 0.01))
   
   scale_tau <- 1/data$v_g
   stack_tau <- inla.stack(
     data=list(Y=data$gamma), 
-    A=list(A_mat,1),tag='dat',
-    effect = list(list(s=1:N_s),
-                  list(idx = 1:N, X_tau = desc)))
-  formula_tau <- Y ~ -1 + X_tau +
-    f(s, model=spde) + 
-    f(idx,model="iid",hyper=list(theta=list(prior="pc.prec", param=c(.6,.01))))
-  control.family = list(hyper = list(prec = list(
-    initial = 0, fixed = TRUE)))
-  
-  model <- inla(formula_tau, family='gaussian', 
-                data=inla.stack.data(stack_tau), 
-                control.predictor=list( A=inla.stack.A(stack_tau), compute = TRUE),
-                control.family = control.family,
-                scale = scale_tau)
-  return(list(mdl = model, spde = spde, mesh = mesh))
-}
-# Fit a model for tau without spatial component
-fit_model_tau_no_spatial <- function(data, desc){
-  N <- dim(data)[1]
-  # Make the C matrix for generic0 random effect
-  #sigma <- makeSigma_etay(data)
-  #scale_psi <- 1/diag(sigma)[1:N]
-  scale_tau <- 1/data$v_t
-  stack_tau <- inla.stack(
-    data=list(Y=data$t), 
     A=list(1),tag='dat',
     effect = list(list(idx = 1:N, X_tau = desc)))
   formula_tau <- Y ~ -1 + X_tau +
-    f(idx,model="iid",hyper=list(theta=list(prior="pc.prec", param=c(1,.01))))
-  control.family = list(hyper = list(prec = list(
-    initial = 0, fixed = TRUE)))
-  
-  model <- inla(formula_tau, family='gaussian', 
-                control.compute=list(dic=TRUE),
-                data=inla.stack.data(stack_tau), 
-                control.predictor=list( A=inla.stack.A(stack_tau), compute = TRUE),
-                control.family = control.family,
-                scale = scale_tau)
-  return(list(mdl = model))
-}
-fit_model_xi2 <- function(data, desc){
-  N <- dim(data)[1]
-  # Make the C matrix for generic0 random effect
-  #sigma <- makeSigma_etay(data)
-  #scale_psi <- 1/diag(sigma)[1:N]
-  scale_xi <- 1/data$v_x
-  stack_xi <- inla.stack(
-    data=list(Y = data$x), 
-    A=list(1),tag='dat',
-    effect = list(list(idx = 1:N, X_xi = desc)))
-  formula_xi <- Y ~ -1 + X_xi + 
-    f(idx,model="iid",hyper=list(theta=list(prior="pc.prec", param=c(.6,.01))))
-  
-  control.family = list(hyper = list(prec = list(
-    initial = 0, fixed = TRUE)))
-  
-  model <- inla(formula_xi, family='gaussian', 
-                data=inla.stack.data(stack_xi), 
-                control.predictor=list( A=inla.stack.A(stack_xi), compute = TRUE),
-                control.family = control.family,
-                scale = scale_xi)
-  return(list(mdl = model))
-}
-
-fit_model_kappa2 <- function(data, desc){
-  N <- dim(data)[1]
-  # Make the C matrix for generic0 random effect
-  #sigma <- makeSigma_etay(data)
-  #scale_psi <- 1/diag(sigma)[1:N]
-  scale_xi <- 1/data$v_k
-  stack_xi <- inla.stack(
-    data=list(Y = data$kappa), 
-    A=list(1),tag='dat',
-    effect = list(list(idx = 1:N, X_xi = desc)))
-  formula_xi <- Y ~ -1 + X_xi + 
-    f(idx,model="iid",hyper=list(theta=list(prior="pc.prec", param=c(.6,.01))))
-  
-  control.family = list(hyper = list(prec = list(
-    initial = 0, fixed = TRUE)))
-  
-  model <- inla(formula_xi, family='gaussian', 
-                data=inla.stack.data(stack_xi), 
-                control.predictor=list( A=inla.stack.A(stack_xi), compute = TRUE),
-                control.family = control.family,
-                scale = scale_xi)
-  return(list(mdl = model))
-}
-fit_model_kappa_with_spatial <- function(data, desc){
-  N <- dim(data)[1]
-  
-  coords_obj <- convertCoords(data)
-  coords <- coords_obj$coords
-  map_scaled <- coords_obj$map_scaled
-  mesh <- inla.mesh.2d(
-    loc=coords,
-    offset = 0.08,
-    max.edge=0.07,
-    # discretization accuracy
-    cutoff=0.005)
-  A_mat <- inla.spde.make.A(mesh, loc=coords)
-  N_s <- dim(A_mat)[2]
-  prior.quantile.sd = 0.4; prior.quantile.range = 0.5
-  spde <- 
-    inla.spde2.pcmatern(mesh=mesh, prior.range=c(prior.quantile.range, 0.95), 
-                        prior.sigma=c(prior.quantile.sd, 0.01))
-  # Make the C matrix for generic0 random effect
-  #sigma <- makeSigma_etay(data)
-  #scale_psi <- 1/diag(sigma)[1:N]
-  scale_xi <- 1/data$v_k
-  stack_xi <- inla.stack(
-    data=list(Y = data$kappa), 
-    A=list(A_mat,1),tag='dat',
-    effect = list(list(s=1:N_s),
-                  list(idx = 1:N, X_xi = desc)))
-  formula_xi <- Y ~ -1 + X_xi + 
-    f(s, model=spde) + 
-    f(idx,model="iid",hyper=list(theta=list(prior="pc.prec", param=c(.6,.01))))
-  
-  control.family = list(hyper = list(prec = list(
-    initial = 0, fixed = TRUE)))
-  
-  model <- inla(formula_xi, family='gaussian', 
-                data=inla.stack.data(stack_xi), 
-                control.predictor=list( A=inla.stack.A(stack_xi), compute = TRUE),
-                control.family = control.family,
-                scale = scale_xi)
-  return(list(mdl = model, spde = spde, mesh = mesh))
-}
-
-fit_model_psi3 <- function(data, desc){
-  N <- dim(data)[1]
-  # Make the C matrix for generic0 random effect
-  #sigma <- makeSigma_etay(data)
-  #scale_psi <- 1/diag(sigma)[1:N]
-  scale_psi <- 1/data$v_p
-  stack_psi <- inla.stack(
-    data=list(Y = data$p), 
-    A=list(1),tag='dat',
-    effect = list(list(idx = 1:N, X_psi = desc)))
-  formula_psi <- Y ~ -1 + X_psi + 
-    f(idx,model="iid",hyper=list(theta=list(prior="pc.prec", param=c(1,.01))))
-  
-  control.family = list(hyper = list(prec = list(
-    initial = 0, fixed = TRUE)))
-  
-  model <- inla(formula_psi, family='gaussian', 
-                data=inla.stack.data(stack_psi), 
-                control.predictor=list( A=inla.stack.A(stack_psi), compute = TRUE),
-                control.family = control.family,
-                scale = scale_psi)
-  return(list(mdl = model))
-}
-
-fit_model_tau3 <- function(data, desc){
-  N <- dim(data)[1]
-  # Make the C matrix for generic0 random effect
-  #sigma <- makeSigma_etay(data)
-  #scale_tau <- 1/diag(sigma)[1:N]
-  scale_tau <- 1/data$v_t
-  stack_tau <- inla.stack(
-    data=list(Y = data$t), 
-    A=list(1),tag='dat',
-    effect = list(list(idx = 1:N, X_tau = desc)))
-  formula_tau <- Y ~ -1 + X_tau + 
-    f(idx,model="iid",hyper=list(theta=list(prior="pc.prec", param=c(1,.01))))
-  
+    f(idx,model="iid",hyper=list(theta=list(prior="pc.prec", param=c(.1,.05))))
   control.family = list(hyper = list(prec = list(
     initial = 0, fixed = TRUE)))
   
@@ -583,13 +244,6 @@ fit_model_tau3 <- function(data, desc){
                 control.family = control.family,
                 scale = scale_tau)
   return(list(mdl = model))
-}
-
-GetHyper <- function(model, hyperParNumber, f){
-  tau0 <- model$marginals.hyperpar[[hyperParNumber]]
-  E <- inla.emarginal(f, tau0)
-  mysd <- sqrt(E[2] - E[1]^2)
-  return(list(mean=E[1], sd=mysd))
 }
 
 transform <- function(x, descriptor){
@@ -598,21 +252,14 @@ transform <- function(x, descriptor){
   return(log(x))
 }
 
-# Prior mean for the beta and u parameters
-makenu_mu <- function(betaRows, uRows){
-  priorMeanB <- 0; priorMeanu <- 0
-  res <- c(rep(priorMeanB,betaRows[1]), rep(priorMeanu,uRows[1]), 
-           rep(priorMeanB,betaRows[2]), rep(priorMeanu,uRows[2]), 
-           rep(priorMeanB,betaRows[3]))
-  return(matrix(res, ncol = 1))
-}
-
 makeQ_u <- function(s, rho, spde){
   Q <- inla.spde.precision(spde, theta=c(log(rho), log(s)))
   return(Q)
 }
 
 log_prior_logSp <- function(u,v){
+  # Prob(sigma < sigma0) = alpha_1
+  # Prob(range > range0) = alpha_2
   sigma0 = 1; range0 = 0.5
   alpha_1 = .95; alpha_2 = .01
   l1 <- -log(alpha_1)*range0
@@ -643,7 +290,7 @@ log_prior_logTheta <- function(kappa){
   pre_psi <- log_prior_logPrecision(kappa$kappa_psi)
   pre_tau <- log_prior_logPrecision(kappa$kappa_tau)
   pre_xi <- log_prior_logPrecision(kappa$kappa_xi)
-  pre_gamma <- log_prior_logPrecision2(kappa$kappa_gamma)
+  pre_gamma <- log_prior_logPrecision(kappa$kappa_gamma)
   res <- sp_psi + sp_tau + pre_psi + pre_tau + pre_xi + pre_gamma
   return(res)
 }
