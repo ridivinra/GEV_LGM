@@ -58,7 +58,7 @@ fn <- function(theta,y,t) {
 
 ####################### ML step ##############################################
 dt_mles <- data.frame()
-hess <- data.frame()
+
 for(i in 1:n_st){
   station <- stations[i]
   currentS <- flowData %>% filter(Station == station)
