@@ -266,10 +266,13 @@ Q_etay <- solve(sigma_eta_y)
 kappa_0 <- c(tau_psi_0$mode, rho_psi_0$mode, sigma_psi_0$mode,
              tau_tau_0$mode, rho_tau_0$mode, sigma_tau_0$mode, 
              tau_xi_0$mode, tau_gamma_0$mode) %>% as.matrix()
-Sigma_kappa_0 <- diag(c(tau_psi_0$sd^2, rho_psi_0$sd^2, sigma_psi_0$sd^2,
-                        tau_tau_0$sd^2, rho_tau_0$sd^2, sigma_tau_0$sd^2, 
-                        tau_xi_0$sd^2, tau_gamma_0$sd^2/4))*0.2
-#Sigma_kappa_0 <- (chain %>% t() %>% data.frame() %>% distinct() %>% cov())*.5
+Sigma_kappa_0 <- diag(c(tau_psi_0$sd^2*2, rho_psi_0$sd^2, sigma_psi_0$sd^2,
+                        tau_tau_0$sd^2*2, rho_tau_0$sd^2, sigma_tau_0$sd^2, 
+                        tau_xi_0$sd^2/2, tau_gamma_0$sd^2/2))*0.2
+kappa_0 <- apply(chain,MARGIN =  1, mean) %>% as.matrix()
+Sigma_kappa_0 <- (chain %>% t() %>% data.frame() %>% distinct() %>% cov())*.5
+tmp <- read.table("../../../Downloads/grein_copy/chain_oos42.csv") %>% as.matrix()
+Sigma_kappa_0 <- cov(t(tmp))*0.4
 library(MASS)
 library(SparseM)
 #################################### Model fitting - Hyperparameters (One chain) ##################
@@ -353,10 +356,10 @@ for(i in 1:N_samples){
   }
   kappa_mat[,i] <- kappa_k
 }
-accept
+accept/N_samples
 # Take first 20% as burn-in.
-chain <- kappa_mat[,seq(.1*N_samples,N_samples,1)]
-
+chain <- kappa_mat[,seq(.5*N_samples,N_samples,1)]
+chain %>% t() %>% data.frame() %>% unique()
 sigma_psi <- sqrt(1/exp(chain[1,]))
 sigma_tau <- sqrt(1/exp(chain[4,]))
 sigma_xi <- sqrt(1/exp(chain[7,]))
