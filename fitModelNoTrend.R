@@ -339,14 +339,6 @@ r_tau <- exp(chain[5,])
 s_tau <- exp(chain[6,])
 
 
-data.frame(val = sigma_psi, indx = 1:length(sigma_psi)) %>% ggplot(aes(indx,val)) + geom_line()
-data.frame(val = sigma_tau, indx = 1:length(sigma_psi)) %>% ggplot(aes(indx,val)) + geom_line()
-data.frame(val = sigma_xi, indx = 1:length(sigma_psi)) %>% ggplot(aes(indx,val)) + geom_line()
-data.frame(val = s_psi, indx = 1:length(s_psi)) %>% ggplot(aes(indx,val)) + geom_line()
-data.frame(val = r_psi, indx = 1:length(r_tau)) %>% ggplot(aes(indx,val)) + geom_line()
-data.frame(val = r_tau, indx = 1:length(r_tau)) %>% ggplot(aes(indx,val)) + geom_line()
-data.frame(val = s_tau, indx = 1:length(s_tau)) %>% ggplot(aes(indx,val)) + geom_line()
-
 ############################ ############################ Spatial hyper for psi ############################ ############################ 
 psi_hyper_sp <- data.frame(
   rho_psi = r_psi,

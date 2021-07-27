@@ -271,10 +271,9 @@ Q_etay <- solve(sigma_eta_y)
 kappa_0 <- c(tau_psi_0$mode, rho_psi_0$mode, sigma_psi_0$mode,
              tau_tau_0$mode, rho_tau_0$mode, sigma_tau_0$mode, 
              tau_xi_0$mode, tau_gamma_0$mode) %>% as.matrix()
-# Might need to tweek the proposal distribution
-load("proposalCovar.RData")
-Sigma_kappa_0 <- Sigma_kappa_0*1.1
-Sigma_kappa_0[1,1] <- Sigma_kappa_0[1,1]*2
+# Might need to change the proposal distribution
+#load("proposalCovar.RData")
+
 # This is another option for a covariance matrix for the proposal distribution
 Sigma_kappa_0 <- diag(c(tau_psi_0$sd^2*4, rho_psi_0$sd^2, sigma_psi_0$sd^2,
                         tau_tau_0$sd^2*2, rho_tau_0$sd^2, sigma_tau_0$sd^2, 
@@ -376,16 +375,6 @@ r_psi <- exp(chain[2,])
 s_psi <- exp(chain[3,])
 r_tau <- exp(chain[5,])
 s_tau <- exp(chain[6,])
-
-
-data.frame(val = sigma_psi, indx = 1:length(sigma_psi)) %>% ggplot(aes(indx,val)) + geom_line()
-data.frame(val = sigma_tau, indx = 1:length(sigma_psi)) %>% ggplot(aes(indx,val)) + geom_line()
-data.frame(val = sigma_xi, indx = 1:length(sigma_psi)) %>% ggplot(aes(indx,val)) + geom_line()
-data.frame(val = sigma_gamma, indx = 1:length(sigma_gamma)) %>% ggplot(aes(indx,val)) + geom_line()
-data.frame(val = s_psi, indx = 1:length(s_psi)) %>% ggplot(aes(indx,val)) + geom_line()
-data.frame(val = r_psi, indx = 1:length(r_tau)) %>% ggplot(aes(indx,val)) + geom_line()
-data.frame(val = r_tau, indx = 1:length(r_tau)) %>% ggplot(aes(indx,val)) + geom_line()
-data.frame(val = s_tau, indx = 1:length(s_tau)) %>% ggplot(aes(indx,val)) + geom_line()
 
 ############################ ############################ Spatial hyper for psi ############################ ############################ 
 psi_hyper_sp <- data.frame(
