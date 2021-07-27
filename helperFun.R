@@ -34,7 +34,7 @@ multiplot <- function(..., plotlist=NULL, file, cols=1, layout=NULL) {
   }
 }
 
-# Make the covariance matrix for the observationss
+# Make the covariance matrix for the observations
 makeSigma_etay_w_gamma <- function(dt){
   N_rows <- dim(dt)[1]
   Sigma_etay <- matrix(0, nrow = 4*N_rows, ncol = 4*N_rows)
@@ -61,6 +61,27 @@ makeSigma_etay_w_gamma <- function(dt){
     Sigma_etay[i+3*N_rows,i+N_rows] <- dt$v_t_g[i]
     Sigma_etay[i+3*N_rows,i+2*N_rows] <- dt$v_k_g[i]
     Sigma_etay[i+3*N_rows,i+3*N_rows] <- dt$v_g[i]
+  }
+  return(Matrix(Sigma_etay))
+}
+# Make the covariance matrix for the observations
+makeSigma_etay <- function(dt){
+  N_rows <- dim(dt)[1]
+  Sigma_etay <- matrix(0, nrow = 3*N_rows, ncol = 3*N_rows)
+  for(i in 1:N_rows){
+    Sigma_etay[i,i] <- dt$v_p[i]
+    Sigma_etay[i,i+N_rows] <- dt$v_p_t[i]
+    Sigma_etay[i,i+2*N_rows] <- dt$v_p_k[i]
+  }
+  for(i in 1:N_rows){
+    Sigma_etay[i+N_rows,i] <- dt$v_p_t[i]
+    Sigma_etay[i+N_rows,i+N_rows] <- dt$v_t[i]
+    Sigma_etay[i+N_rows,i+2*N_rows] <- dt$v_t_k[i]
+  }
+  for(i in 1:N_rows){
+    Sigma_etay[i+2*N_rows,i] <- dt$v_p_k[i]
+    Sigma_etay[i+2*N_rows,i+N_rows] <- dt$v_t_k[i]
+    Sigma_etay[i+2*N_rows,i+2*N_rows] <- dt$v_k[i]
   }
   return(Matrix(Sigma_etay))
 }
