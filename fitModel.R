@@ -539,6 +539,7 @@ beta_psi_results <- data.frame(
   q_50 = apply(beta_psi, 1, quantile, probs = 0.5),
   q_975 = apply(beta_psi, 1, quantile, probs = 0.975)
 )
+beta_psi_results
 
 beta_tau_results <- data.frame(
   Covariate = colnames(X_tau),
@@ -548,6 +549,7 @@ beta_tau_results <- data.frame(
   q_50 = apply(beta_tau, 1, quantile, probs = 0.5),
   q_975 = apply(beta_tau, 1, quantile, probs = 0.975)
 )
+beta_tau_results
 
 beta_kappa_results <- data.frame(
   Covariate = colnames(X_kappa),
@@ -557,6 +559,7 @@ beta_kappa_results <- data.frame(
   q_50 = apply(beta_kappa, 1, quantile, probs = 0.5),
   q_975 = apply(beta_kappa, 1, quantile, probs = 0.975)
 )
+beta_kappa_results
 
 beta_gamma_results <- data.frame(
   Covariate = colnames(X_gamma),
@@ -566,6 +569,7 @@ beta_gamma_results <- data.frame(
   q_50 = apply(beta_gamma, 1, quantile, probs = 0.5),
   q_975 = apply(beta_gamma, 1, quantile, probs = 0.975)
 )
+beta_gamma_results
 
 # Spatial fields
 # This gives us the value of the spatial field for psi and tau at each station location
