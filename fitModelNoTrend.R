@@ -269,7 +269,7 @@ library(MASS)
 library(SparseM)
 #################################### Model fitting - Hyperparameters (One chain) ##################
 # Could also run more chains here parallel for example using mclapply from the parallel package
-N_samples <- 1000
+N_samples <- 1000 # Change this number to take more samples
 Q_x <- Matrix(0,nrow = 3*N+K, ncol = 3*N+K)
 B <- Matrix(0,nrow = 3*N, ncol = 3*N+K)
 B[1:(3*N),1:(3*N)] <- diag(1,3*N)
@@ -349,7 +349,8 @@ for(i in 1:N_samples){
 }
 accept/N_samples
 # Take first 20% as burn-in.
-chain <- kappa_mat[,seq(0.1*N_samples,N_samples,1)]
+burnIn <- 0.2
+chain <- kappa_mat[,seq(burnIn*N_samples,N_samples,1)]
 sigma_psi <- sqrt(1/exp(chain[1,]))
 sigma_tau <- sqrt(1/exp(chain[4,]))
 sigma_xi <- sqrt(1/exp(chain[7,]))
