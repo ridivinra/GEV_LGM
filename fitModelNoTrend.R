@@ -143,7 +143,7 @@ A_tau <- A_mat
 ################# Fit INLA models, to have good starting proposal distribution ###############
 # Add location to MLE data
 dt_mles <- dt_mles %>% 
-  left_join(catchmentDesc %>% dplyr::select(Northing, Easting, Station, Area,long,lat))
+  left_join(catchmentDesc %>% dplyr::select(Northing, Easting, Station,long,lat))
 
 mdl_sep_psi <- fit_model_psi(data = dt_mles, desc = X_psi)
 mdl_sep_tau <- fit_model_tau(data = dt_mles, desc = X_tau)
@@ -162,7 +162,27 @@ N_xi <- dim(X_kappa)[2]
 N_colsA <- dim(A_psi)[2]
 
 ################################################ Helper functions ###################################################
-
+# Make the covariance matrix for the observations
+makeSigma_etay <- function(dt){
+  N_rows <- dim(dt)[1]
+  Sigma_etay <- matrix(0, nrow = 3*N_rows, ncol = 3*N_rows)
+  for(i in 1:N_rows){
+    Sigma_etay[i,i] <- dt$v_p[i]
+    Sigma_etay[i,i+N_rows] <- dt$v_p_t[i]
+    Sigma_etay[i,i+2*N_rows] <- dt$v_p_k[i]
+  }
+  for(i in 1:N_rows){
+    Sigma_etay[i+N_rows,i] <- dt$v_p_t[i]
+    Sigma_etay[i+N_rows,i+N_rows] <- dt$v_t[i]
+    Sigma_etay[i+N_rows,i+2*N_rows] <- dt$v_t_k[i]
+  }
+  for(i in 1:N_rows){
+    Sigma_etay[i+2*N_rows,i] <- dt$v_p_k[i]
+    Sigma_etay[i+2*N_rows,i+N_rows] <- dt$v_t_k[i]
+    Sigma_etay[i+2*N_rows,i+2*N_rows] <- dt$v_k[i]
+  }
+  return(Matrix(Sigma_etay))
+}
 get_mode_mean_sd_for_hyperparameter <- function(mdl, fun, hyperparameter){
   x0 <- mdl$marginals.hyperpar[[hyperparameter]]
   E <- inla.emarginal(function(x) c(fun(x), fun(x)^2), x0)

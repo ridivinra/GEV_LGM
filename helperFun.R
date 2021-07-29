@@ -34,58 +34,6 @@ multiplot <- function(..., plotlist=NULL, file, cols=1, layout=NULL) {
   }
 }
 
-# Make the covariance matrix for the observations
-makeSigma_etay_w_gamma <- function(dt){
-  N_rows <- dim(dt)[1]
-  Sigma_etay <- matrix(0, nrow = 4*N_rows, ncol = 4*N_rows)
-  for(i in 1:N_rows){
-    Sigma_etay[i,i] <- dt$v_p[i]
-    Sigma_etay[i,i+N_rows] <- dt$v_p_t[i]
-    Sigma_etay[i,i+2*N_rows] <- dt$v_p_k[i]
-    Sigma_etay[i,i+3*N_rows] <- dt$v_p_g[i]
-  }
-  for(i in 1:N_rows){
-    Sigma_etay[i+N_rows,i] <- dt$v_p_t[i]
-    Sigma_etay[i+N_rows,i+N_rows] <- dt$v_t[i]
-    Sigma_etay[i+N_rows,i+2*N_rows] <- dt$v_t_k[i]
-    Sigma_etay[i+N_rows,i+3*N_rows] <- dt$v_t_g[i]
-  }
-  for(i in 1:N_rows){
-    Sigma_etay[i+2*N_rows,i] <- dt$v_p_k[i]
-    Sigma_etay[i+2*N_rows,i+N_rows] <- dt$v_t_k[i]
-    Sigma_etay[i+2*N_rows,i+2*N_rows] <- dt$v_k[i]
-    Sigma_etay[i+2*N_rows,i+3*N_rows] <- dt$v_k_g[i]
-  }
-  for(i in 1:N_rows){
-    Sigma_etay[i+3*N_rows,i] <- dt$v_p_g[i]
-    Sigma_etay[i+3*N_rows,i+N_rows] <- dt$v_t_g[i]
-    Sigma_etay[i+3*N_rows,i+2*N_rows] <- dt$v_k_g[i]
-    Sigma_etay[i+3*N_rows,i+3*N_rows] <- dt$v_g[i]
-  }
-  return(Matrix(Sigma_etay))
-}
-# Make the covariance matrix for the observations
-makeSigma_etay <- function(dt){
-  N_rows <- dim(dt)[1]
-  Sigma_etay <- matrix(0, nrow = 3*N_rows, ncol = 3*N_rows)
-  for(i in 1:N_rows){
-    Sigma_etay[i,i] <- dt$v_p[i]
-    Sigma_etay[i,i+N_rows] <- dt$v_p_t[i]
-    Sigma_etay[i,i+2*N_rows] <- dt$v_p_k[i]
-  }
-  for(i in 1:N_rows){
-    Sigma_etay[i+N_rows,i] <- dt$v_p_t[i]
-    Sigma_etay[i+N_rows,i+N_rows] <- dt$v_t[i]
-    Sigma_etay[i+N_rows,i+2*N_rows] <- dt$v_t_k[i]
-  }
-  for(i in 1:N_rows){
-    Sigma_etay[i+2*N_rows,i] <- dt$v_p_k[i]
-    Sigma_etay[i+2*N_rows,i+N_rows] <- dt$v_t_k[i]
-    Sigma_etay[i+2*N_rows,i+2*N_rows] <- dt$v_k[i]
-  }
-  return(Matrix(Sigma_etay))
-}
-
 # Convert coordinates to long lat
 convertCoords <- function(dt){
   # Variables for holding the coordinate system types 
@@ -140,7 +88,6 @@ convertCoords <- function(dt){
 }
 
 
-# Fit a model for psi with the spatial component
 fit_model_psi <- function(data, desc){
   N <- dim(data)[1]
   coords_obj <- convertCoords(data)
@@ -180,7 +127,6 @@ fit_model_psi <- function(data, desc){
                 scale = scale_psi)
   return(list(mdl = model, spde = spde, mesh = mesh))
 } 
-
 fit_model_tau <- function(data, desc){
   N <- dim(data)[1]
   coords_obj <- convertCoords(data)
@@ -221,7 +167,6 @@ fit_model_tau <- function(data, desc){
                 scale = scale_tau)
   return(list(mdl = model, spde = spde, mesh = mesh))
 }
-
 fit_model_kappa <- function(data, desc){
   N <- dim(data)[1]
   # Make the C matrix for generic0 random effect
@@ -245,7 +190,6 @@ fit_model_kappa <- function(data, desc){
                 scale = scale_xi)
   return(list(mdl = model))
 }
-
 fit_model_gamma <- function(data, desc){
   N <- dim(data)[1]
   
@@ -321,25 +265,7 @@ log_prior_logTheta_noGamma <- function(kappa){
   pre_psi <- log_prior_logPrecision(kappa$kappa_psi)
   pre_tau <- log_prior_logPrecision(kappa$kappa_tau)
   pre_xi <- log_prior_logPrecision(kappa$kappa_xi)
-  #pre_gamma <- log_prior_logPrecision2(kappa$kappa_gamma)
-  res <- sp_psi + sp_tau + pre_psi + pre_tau + pre_xi # + pre_gamma
+  res <- sp_psi + sp_tau + pre_psi + pre_tau + pre_xi
   return(res)
 }
-log_prior_logTheta_noSpatial <- function(kappa){
-  pre_psi <- log_prior_logPrecision(kappa$kappa_psi)
-  pre_tau <- log_prior_logPrecision(kappa$kappa_tau)
-  pre_xi <- log_prior_logPrecision(kappa$kappa_xi)
-  pre_gamma <- log_prior_logPrecision2(kappa$kappa_gamma)
-  res <- pre_psi + pre_tau + pre_xi + pre_gamma
-  return(res)
-}
-log_prior_logTheta_noSpatial_noGamma <- function(kappa){
-  pre_psi <- log_prior_logPrecision(kappa$kappa_psi)
-  pre_tau <- log_prior_logPrecision(kappa$kappa_tau)
-  pre_xi <- log_prior_logPrecision(kappa$kappa_xi)
-  #pre_gamma <- log_prior_logPrecision2(kappa$kappa_gamma)
-  res <- pre_psi + pre_tau + pre_xi #+ pre_gamma
-  return(res)
-}
-
 
